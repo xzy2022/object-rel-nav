@@ -54,8 +54,10 @@ class Episode:
         self.traversable_class_indices = None
 
         if self.args.log_robot:
-            episode_results_dir = f"{self.path_episode.parts[-1]}_{self.args.method.lower()}_{self.args.goal_source}"
-            self.path_episode_results = path_results_folder / episode_results_dir
+            self.path_episode_results = (
+                path_results_folder
+                / get_episode_results_dir_name(self.args, self.path_episode)
+            )
             self.path_episode_results.mkdir(exist_ok=True, parents=True)
             self.set_logging()
 
@@ -1044,6 +1046,90 @@ def wandb_log_episode(epsiode_name, results_dict, video_path=None):
         wandb.log({"video": wandb.Video(video_path_2)}, commit=True)
 
 
+def get_results_base_dir(args):
+    path_results = Path(args.path_results)
+    task_str = args.task_type
+    if args.reverse:
+        task_str += "_reverse"
+    return path_results / task_str / args.exp_name / args.split / args.max_start_distance
+
+
+def get_results_run_name(args):
+    return f"{datetime.now().strftime('%Y%m%d-%H-%M-%S')}_{args.method.lower()}_{args.goal_source}"
+
+
+def get_episode_results_dir_name(args, path_episode):
+    return f"{path_episode.parts[-1]}_{args.method.lower()}_{args.goal_source}"
+
+
+def get_episode_success_status(path_results_folder, args, path_episode):
+    metadata_path = (
+        Path(path_results_folder)
+        / get_episode_results_dir_name(args, path_episode)
+        / "metadata.txt"
+    )
+    if not metadata_path.exists():
+        return None
+
+    with open(metadata_path, "r") as f:
+        for line in f:
+            if line.startswith("success_status="):
+                return line.split("=", 1)[1].strip()
+    return None
+
+
+def is_episode_completed(path_results_folder, args, path_episode):
+    return get_episode_success_status(path_results_folder, args, path_episode) is not None
+
+
+def _config_for_resume_compare(config_dict):
+    ignored_keys = {"config_file", "resume_eval", "traversable_class_names"}
+
+    def normalize(value):
+        if isinstance(value, dict):
+            return {
+                k: normalize(v)
+                for k, v in sorted(value.items())
+                if k not in ignored_keys
+            }
+        if isinstance(value, list):
+            return [normalize(v) for v in value]
+        if isinstance(value, tuple):
+            return [normalize(v) for v in value]
+        return value
+
+    return normalize(config_dict)
+
+
+def _configs_match_for_resume(path_results_folder, args):
+    args_path = Path(path_results_folder) / "args.yaml"
+    if not args_path.exists():
+        return False
+
+    with open(args_path, "r") as f:
+        previous_args = yaml.safe_load(f) or {}
+
+    return _config_for_resume_compare(previous_args) == _config_for_resume_compare(
+        vars(args)
+    )
+
+
+def _find_latest_results_dir(args):
+    base_dir = get_results_base_dir(args)
+    if not base_dir.exists():
+        return None
+
+    suffix = f"_{args.method.lower()}_{args.goal_source}"
+    candidates = [
+        path
+        for path in base_dir.iterdir()
+        if path.is_dir() and path.name.endswith(suffix)
+    ]
+    if len(candidates) == 0:
+        return None
+    return sorted(candidates, key=lambda path: path.name)[-1]
+
+
 def load_run_list(args, path_episode_root) -> list:
     if args.run_list == "":
         path_episodes = sorted(path_episode_root.glob("*"))
@@ -1073,18 +1159,30 @@ def load_run_list(args, path_episode_root) -> list:
 
 def init_results_dir_and_save_cfg(args, default_logger=None):
     if (args.log_robot or args.save_vis) and args.run_list == "":
-        path_results = Path(args.path_results)
-        task_str = args.task_type
-        if args.reverse:
-            task_str += "_reverse"
-        path_results_folder = (
-            path_results
-            / task_str
-            / args.exp_name
-            / args.split
-            / args.max_start_distance
-            / f'{datetime.now().strftime("%Y%m%d-%H-%M-%S")}_{args.method.lower()}_{args.goal_source}'
-        )
+        path_results_folder = None
+        latest_results_folder = _find_latest_results_dir(args)
+        resume_eval = bool(getattr(args, "resume_eval", False))
+
+        if resume_eval and latest_results_folder is not None:
+            configs_match = _configs_match_for_resume(latest_results_folder, args)
+            completed = (latest_results_folder / "results_summary.csv").exists()
+            if configs_match and not completed:
+                path_results_folder = latest_results_folder
+                print(f"[resume_eval] Resuming unfinished evaluation: {path_results_folder}")
+            elif configs_match and completed:
+                print(
+                    "[resume_eval] Latest matching evaluation is already complete; "
+                    "starting a new results folder."
+                )
+            else:
+                print(
+                    "[resume_eval] Latest evaluation config differs from current config; "
+                    "starting a new results folder."
+                )
+
+        if path_results_folder is None:
+            path_results_folder = get_results_base_dir(args) / get_results_run_name(args)
+
         path_results_folder.mkdir(exist_ok=True, parents=True)
         if default_logger is not None:
             default_logger.update_file_handler_root(path_results_folder / "output.log")

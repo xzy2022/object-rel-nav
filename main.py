@@ -38,6 +38,17 @@ from libs.common import utils
 from libs.experiments import task_setup
 
 
+def update_results_summary(results_summary, success_status):
+    results_summary["total_episodes"] += 1
+    if success_status is None or "success" in success_status.lower():
+        results_summary["successful_episodes"] += 1
+    else:
+        results_summary["failed_episodes"] += 1
+        if success_status not in results_summary["failure_reasons"]:
+            results_summary["failure_reasons"][success_status] = 0
+        results_summary["failure_reasons"][success_status] += 1
+
+
 def run(args):
     # set up all the paths
     path_dataset = Path(args.path_dataset)
@@ -72,8 +83,6 @@ def run(args):
     path_results_folder = task_setup.init_results_dir_and_save_cfg(args, default_logger)
     print("\nConfig file saved in the results folder!\n")
 
-    preload_data = task_setup.preload_models(args)
-
     episodes = task_setup.load_run_list(args, path_episode_root)[
         args.start_idx : args.end_idx : args.step_idx
     ]
@@ -81,14 +90,42 @@ def run(args):
         raise ValueError(
             f"No episodes found at {path_episode_root=}. Please check the dataset path and indices."
         )
+
+    resume_eval = (
+        getattr(args, "resume_eval", False)
+        and args.log_robot
+        and args.run_list == ""
+        and (path_results_folder / "results_summary.csv").exists() is False
+    )
+    if resume_eval:
+        pending_episodes = []
+        for path_episode in episodes:
+            success_status = task_setup.get_episode_success_status(
+                path_results_folder, args, path_episode
+            )
+            if success_status is None:
+                pending_episodes.append(path_episode)
+            else:
+                update_results_summary(results_summary, success_status)
+        skipped_episodes = len(episodes) - len(pending_episodes)
+        if skipped_episodes > 0:
+            print(
+                f"[resume_eval] Skipping {skipped_episodes} completed episodes; "
+                f"{len(pending_episodes)} episodes remain."
+            )
+        episodes = pending_episodes
+
     print(f"Total episodes to process: {len(episodes)}")
+
+    preload_data = None
+    if len(episodes) > 0:
+        preload_data = task_setup.preload_models(args)
 
     for ei, path_episode in tqdm(
         enumerate(episodes),
         total=len(episodes),
         desc=f"Processing Episodes (Total: {len(episodes)})",
     ):
-        results_summary["total_episodes"] += 1
         episode_name = path_episode.parts[-1].split("_")[0]
         path_scene_hm3d = sorted(path_scenes_root_hm3d.glob(f"*{episode_name}"))[0]
         scene_name_hm3d = str(sorted(path_scene_hm3d.glob("*basis.glb"))[0])
@@ -169,14 +206,7 @@ def run(args):
                 )
             success_status = episode_runner.success_status
 
-        # Track success and failure statistics
-        if success_status is None or "success" in success_status.lower():
-            results_summary["successful_episodes"] += 1
-        else:
-            results_summary["failed_episodes"] += 1
-            if success_status not in results_summary["failure_reasons"]:
-                results_summary["failure_reasons"][success_status] = 0
-            results_summary["failure_reasons"][success_status] += 1
+        update_results_summary(results_summary, success_status)
 
         print(f"Completed with success status: {success_status}")
 
