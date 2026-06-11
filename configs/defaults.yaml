@@ -6,7 +6,7 @@ resume_eval: True # resume the latest unfinished matching run instead of creatin
 
 # episode/task settings
 start_idx: 0 # start index for episodes
-step_idx: 3 # step index for episodes
+step_idx: 1 # step index for episodes
 end_idx: 108 # end index for episodes
 
 reverse: False # Ignore
