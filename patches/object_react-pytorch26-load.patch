@@ -1,0 +1,21 @@
+diff --git a/train/train.py b/train/train.py
+index f75a9f6..a54b2c6 100644
+--- a/train/train.py
++++ b/train/train.py
+@@ -278,8 +278,15 @@ def resume_model(config, model, load_project_folder=None):
+         load_project_folder = os.path.join("logs", config["load_run"])
+     print("Loading model from ", load_project_folder)
+     latest_path = os.path.join(load_project_folder, "latest.pth")
++    load_kwargs = {
++        "map_location": f"cuda:0" if torch.cuda.is_available() else "cpu"
++    }
++    # PyTorch 2.6+ defaults torch.load(..., weights_only=True), but this
++    # checkpoint stores full training state and custom classes.
++    if "weights_only" in torch.load.__code__.co_varnames:
++        load_kwargs["weights_only"] = False
+     latest_checkpoint = torch.load(
+-        latest_path, map_location=f"cuda:0" if torch.cuda.is_available() else "cpu"
++        latest_path, **load_kwargs
+     )  # TODO: fails when visible = [1]
+     load_model(model, config["model_type"], latest_checkpoint)
+     current_epoch = 0
