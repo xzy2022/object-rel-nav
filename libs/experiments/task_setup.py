@@ -1106,8 +1106,17 @@ def init_results_dir_and_save_cfg(args, default_logger=None):
 
 def preload_models(args):
     # preload some models before iterating over the episodes
+    controller_config_file = None
+    if args.method.lower() == "learnt":
+        controller_config = getattr(args, "controller", None)
+        if controller_config is None or "config_file" not in controller_config:
+            raise ValueError(
+                "controller.config_file must be set when method is 'learnt'"
+            )
+        controller_config_file = controller_config["config_file"]
+
     goal_controller = model_loader.get_controller_model(
-        args.method, args.goal_source, args.controller["config_file"])
+        args.method, args.goal_source, controller_config_file)
 
     segmentor = None
     if args.goal_source == "topological":

@@ -19,13 +19,15 @@ def get_depth_model():
     return depth_model
 
 
-def get_controller_model(method, goal_source, config_filepath):
-    goal_controller = None
-    if method == 'learnt':
-        from libs.control.objectreact import ObjRelLearntController
-        goal_controller = ObjRelLearntController(
-            config_filepath, goal_source=goal_source)
-    return goal_controller
+def get_controller_model(method, goal_source, config_filepath=None):
+    if method.lower() != 'learnt':
+        return None
+
+    if config_filepath is None:
+        raise ValueError("config_filepath is required when method is 'learnt'")
+
+    from libs.control.objectreact import ObjRelLearntController
+    return ObjRelLearntController(config_filepath, goal_source=goal_source)
 
 
 def get_segmentor(segmentor_name, image_width, image_height, device=None,
