@@ -2,6 +2,7 @@
 path_dataset: './data/' # symlink different datasets within this folder
 path_models: ''
 path_results: './out/results/' # output folder for results
+resume_eval: True # resume the latest unfinished matching run instead of creating a new folder
 
 # episode/task settings
 start_idx: 0 # start index for episodes
