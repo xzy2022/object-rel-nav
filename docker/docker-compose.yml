@@ -2,7 +2,7 @@ services:
   proj:
     build:
       context: ../
-      dockerfile: "$DOCKER_FILER"
+      dockerfile: "$DOCKER_FILE"
       additional_contexts:
         torch_wheels: "$WHEELS_DIR"
     
