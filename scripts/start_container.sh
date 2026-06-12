@@ -100,6 +100,26 @@ fi
 home_dir="$(getent passwd "${uid}" | cut -d: -f6)"
 mkdir -p "${home_dir}"
 chown "${uid}:${gid}" "${home_dir}" || true
+
+# 给该 UID 对应用户免密码 sudo 权限。
+user_name="$(getent passwd "${uid}" | cut -d: -f1)"
+
+mkdir -p /etc/sudoers.d
+echo "${user_name} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${user_name}"
+chmod 0440 "/etc/sudoers.d/${user_name}"
+
+# 给该用户配置 conda 自动进入 object-rel-nav。
+touch "${home_dir}/.bashrc"
+
+if ! grep -q "/opt/conda/etc/profile.d/conda.sh" "${home_dir}/.bashrc"; then
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> "${home_dir}/.bashrc"
+fi
+
+if ! grep -q "conda activate object-rel-nav" "${home_dir}/.bashrc"; then
+    echo "conda activate object-rel-nav" >> "${home_dir}/.bashrc"
+fi
+
+chown "${uid}:${gid}" "${home_dir}/.bashrc" || true
 '
 
 env "${COMPOSE_ENV[@]}" "${COMPOSE[@]}" exec proj bash
