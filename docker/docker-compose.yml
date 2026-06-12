@@ -1,0 +1,73 @@
+services:
+  proj:
+    build:
+      context: ../
+      dockerfile: "$DOCKER_FILER"
+      additional_contexts:
+        torch_wheels: "$WHEELS_DIR"
+    
+    image: ${IMAGE_NAME}
+    container_name: ${CONTAINER_NAME}
+    working_dir: /workspace/object-rel-nav
+    user: "${HOST_UID}:${HOST_GID}"
+    stdin_open: true
+    tty: true
+    gpus: all
+    ipc: host
+    shm_size: 16gb
+
+    environment:
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,graphics
+      HF_HOME: /cache/huggingface
+
+    volumes:
+      - type: bind
+        source: ${REPO_DIR}
+        target: /workspace/object-rel-nav
+
+      - type: bind
+        source: ${HM3D_IIN_VAL_SRC}
+        target: /workspace/object-rel-nav/data/hm3d_iin_val
+        read_only: true
+
+      - type: bind
+        source: ${MAPS_VIA_ALT_GOAL_SRC}
+        target: /workspace/object-rel-nav/data/maps_via_alt_goal
+        read_only: true
+
+      - type: bind
+        source: ${HM3D_V02_VAL_SRC}
+        target: /workspace/object-rel-nav/data/hm3d_v0.2/val
+        read_only: true
+
+      - type: bind
+        source: ${DEPTH_ANYTHING_METRIC_DEPTH_INDOOR_SRC}
+        target: /workspace/object-rel-nav/model_weights/depth_anything_metric_depth_indoor.pt
+        read_only: true
+
+      - type: bind
+        source: ${DEPTH_ANYTHING_VITL14_SRC}
+        target: /workspace/object-rel-nav/model_weights/depth_anything_vitl14.pth
+        read_only: true
+
+      - type: bind
+        source: ${FASTSAM_MODEL_SRC}
+        target: /workspace/object-rel-nav/model_weights/FastSAM-s.pt
+        read_only: true
+
+      - type: bind
+        source: ${CLIP_VIT_B_32_SRC}
+        target: /workspace/object-rel-nav/weights/clip/ViT-B-32.pt
+        read_only: true
+
+      - type: bind
+        source: ${HF_HOME_DIR}
+        target: /cache/huggingface
+        read_only: true
+      
+      - type: bind
+        source: ${WHEELS_DIR}
+        target: /wheels/
+        read_only: true
+
+    command: ["sleep", "infinity"]
