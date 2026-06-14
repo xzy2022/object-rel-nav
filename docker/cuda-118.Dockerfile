@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-# 当前为从 cuda 128 版本复制来的模板,后续会做适当修改以适配 cuda 118 版本
-FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu22.04
+FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Shanghai
@@ -69,16 +68,16 @@ RUN sed -i '/^prefix:/d' /tmp/object-rel-nav.yml && \
     conda clean -afy
 
 # 目标环境安装 pip 包
-RUN --mount=type=bind,from=torch_wheels,source=torch271_cu128_py39,target=/tmp/wheels/torch271_cu128_py39,readonly \
+RUN --mount=type=bind,from=torch_wheels,source=torch271_cu118_py39,target=/tmp/wheels/torch271_cu118_py39,readonly \
     source "${CONDA_DIR}/etc/profile.d/conda.sh" && \
     conda activate object-rel-nav && \
     python -m pip install --upgrade pip setuptools wheel && \
     python -m pip install \
       --no-index \
-      --find-links=/tmp/wheels/torch271_cu128_py39 \
-      torch==2.7.1+cu128 \
-      torchvision==0.22.1+cu128 \
-      torchaudio==2.7.1+cu128 && \
+      --find-links=/tmp/wheels/torch271_cu118_py39 \
+      torch==2.7.1+cu118 \
+      torchvision==0.22.1+cu118 \
+      torchaudio==2.7.1+cu118 && \
     python -m pip list --format=freeze > /tmp/object-rel-nav-constraints.txt && \
     PIP_EXTRA_PKGS=( \
       kornia \
