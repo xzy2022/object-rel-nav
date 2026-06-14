@@ -29,4 +29,5 @@ if [[ "$ENV_FILE" != /* ]]; then
 fi
 
 HOST_UID="$(id -u)" HOST_GID="$(id -g)" \
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build "$SERVICE_NAME"
+docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" \
+    build --progress=plain "$SERVICE_NAME"
