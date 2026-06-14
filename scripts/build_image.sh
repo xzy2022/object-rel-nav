@@ -28,6 +28,22 @@ if [[ "$ENV_FILE" != /* ]]; then
     fi
 fi
 
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+if [[ -z "${DOCKER_IMPORT_DIR:-}" ]]; then
+    echo "Error: DOCKER_IMPORT_DIR must be specified in ${ENV_FILE}." >&2
+    exit 1
+fi
+
+if [[ -f "$DOCKER_IMPORT_DIR" ]]; then
+    echo "Importing image from: ${DOCKER_IMPORT_DIR}"
+    docker load -i "$DOCKER_IMPORT_DIR"
+    exit 0
+fi
+
 HOST_UID="$(id -u)" HOST_GID="$(id -g)" \
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" \
     build --progress=plain "$SERVICE_NAME"
