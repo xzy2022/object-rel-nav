@@ -29,13 +29,17 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+if [[ "$ENV_FILE" != /* && -f "${PROJECT_ROOT}/${ENV_FILE}" ]]; then
+    ENV_FILE="${PROJECT_ROOT}/${ENV_FILE}"
+fi
+
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "Env file not found: $ENV_FILE" >&2
     exit 1
 fi
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 COMPOSE=(
     docker compose

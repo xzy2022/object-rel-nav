@@ -14,13 +14,17 @@ fi
 
 ENV_FILE="$1"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+if [[ "$ENV_FILE" != /* && -f "${PROJECT_ROOT}/${ENV_FILE}" ]]; then
+    ENV_FILE="${PROJECT_ROOT}/${ENV_FILE}"
+fi
+
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "Env file not found: $ENV_FILE" >&2
     exit 1
 fi
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 set -a
 # shellcheck disable=SC1090
@@ -75,7 +79,7 @@ for image in "${IMAGE_NAMES[@]}"; do
     if ! docker image inspect "$image" >/dev/null 2>&1; then
         echo "Image not found locally: $image" >&2
         echo "You may need to build it first, for example:" >&2
-        echo "  scripts/build_image.sh $ENV_FILE" >&2
+        echo "  docker/scripts/build_image.sh $ENV_FILE" >&2
         exit 1
     fi
 done
