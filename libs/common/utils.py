@@ -310,7 +310,7 @@ def initialize_results(
                      f'goal position={list(goal_position) if goal_position is not None else ""}\n'
                      f'traversable categories={traversable_categories if traversable_categories is not None else ""}\n')
 
-    with open(str(filename_results_episode), 'a') as f:
+    with open(str(filename_results_episode), 'w') as f:
         f.writelines(f'step,x,y,z,yaw,distance_to_goal,velocity_control,theta_control,discrete_action,collided\n')
     return
 
