@@ -28,7 +28,7 @@ git submodule update --init --recursive
 
 # install habitat-lab
 cd libs/
-git clone https://github.com/facebookresearch/habitat-lab.git
+git clone https://gitee.com/xie-ziyang1/habitat-lab.git
 cd habitat-lab/
 git checkout v0.2.4
 pip install -e habitat-lab
