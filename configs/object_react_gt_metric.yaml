@@ -1,3 +1,11 @@
+# ============================================================
+# gt_metric: 控制器性能上限实验
+# 目标由仿真器直接提供 (GT 深度 + GT 实例 -> 测地最短路),
+# 不建图、不分割、不匹配, 用来测量 learnt 控制器的性能上界.
+# 关键约束: infer_depth / infer_traversable 必须为 False,
+# 否则喂给“神谕”的就是预测值, 不再是上限.
+# ============================================================
+
 # required paths
 path_dataset: './data/'
 path_models: ''
@@ -6,7 +14,7 @@ resume_eval: True # resume the latest unfinished matching run instead of creatin
 
 # episode/task settings
 start_idx: 0
-step_idx: 3
+step_idx: 1
 end_idx: 108
 
 reverse: False
@@ -27,13 +35,11 @@ path_run: ''
 
 # controller and mapping params
 method: 'learnt'
-segmentor: 'fast_sam' # [sim, fast_sam, sam, sam2, sam21]
+segmentor: 'fast_sam' # gt_metric 下不加载分割器, 此项无效
 goal_source: 'gt_metric'  # [gt_metric, gt_topological, gt_topometric, topological]
-graph_filename: null # [null, "<specify>"]
-# 是否用单目深度估计模型代替模拟器的真值深度
-infer_depth: False
-# 是否使用 FastSAM 预测的可通行区域 mask
-infer_traversable: False
+graph_filename: null # gt_metric 下不建图, 此项无效
+infer_depth: False       # 必须 False: 使用仿真器 GT 深度
+infer_traversable: False # 必须 False: 使用仿真器 GT 实例
 
 # logging and display
 log_wandb: False
@@ -46,23 +52,19 @@ plot: False
 save_vis: False
 # dump_episode_images: 0
 
-# 是否剔除当前查询帧里预测出来的实例.goal_source == "topological"
-cull_qry_instances: False 
-# 是否剔除地图图节点.goal_source == "topological"
+cull_qry_instances: False
 cull_map_instances: True
 cull_map_method: 'fast_sam' # from ['sim', 'fast_sam']
-
-# 实际剔除逻辑是写死的"移除边"(task_setup.py:411-413)
-# 全仓库 Python 代码里没有任何地方引用它(grep 无结果),是个废弃/未接线的配置项
 cull_map_strategy: 'edge_remove' # from ['edge_reweight_da', 'edge_remove']
 
 sim:
   hfov: 120
   width: 320
   height: 240
-  sensor_height: 1.31 # [0.4, 1.31, 1.5]
+  sensor_height: 0.4 # [0.4, 1.31, 1.5]
   sensor_height_map: 1.31 # [0.4, 1.31, 1.5]
 
+# 以下 goal_gen 整块在 gt_metric 下均不生效 (无建图/匹配/规划), 保留以兼容加载
 goal_gen:
   textLabels: [] # ["floor", "ceiling", "ground"] # from [[], <list of labels to remove>
 
